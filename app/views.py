@@ -460,8 +460,8 @@ class check_post_services(APIView):
         name = request.data.get('name')
         description = request.data.get('description')
         location = request.data.get('location')
-        latitude = request.data.get('latitude')
-        longitude = request.data.get('longitude')
+        latitude = request.data.get('latitude', None)
+        longitude = request.data.get('longitude', None)
         list_of_check_post_officer = request.data.get('list_of_check_post_officer')
         check_post_admin_id = request.GET.get('check_post_admin_id')
         
@@ -610,14 +610,49 @@ class woodlogs_count_check(APIView):
         check_post_officer_id = request.data.get('check_post_officer_id')
         image = request.FILES.get('image')
         name = request.data.get('name')
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
 
-        if not check_post_id or not check_post_officer_id or not image:
+        if not check_post_id or not check_post_officer_id or not image or not latitude or not longitude:
             return Response({
                 "success": False,
-                "message": "check_post_id, check_post_officer_id, and image are required."
+                "message": "check_post_id, check_post_officer_id, image, latitude, longitude  are required."
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        check_post_data = (database.child("checkpost").get()).val()
+        if check_post_data is None:
+            return Response({
+                "success": False,
+                "message": "Check post not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        specific_check_post_data = None
+        for post_key, post_value in check_post_data.items():
+            if post_value.get('_id') == check_post_id:
+                specific_check_post_data = post_value
+                break
 
-       
+        if specific_check_post_data is None:
+            return Response({
+                "success": False,
+                "message": "Check post ID not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if check_post_officer_id not in specific_check_post_data.get('list_of_check_post_officer', []):
+            return Response({
+                "success": False,
+                "message": "Check post officer ID not found in the list of check post officers"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        stored_lat = float(specific_check_post_data.get('latitude'))
+        stored_long = float(specific_check_post_data.get('longitude'))
+
+        if not check_the_post_under_required_lat_long(float(latitude), float(longitude), stored_lat, stored_long):
+            return Response({
+                "success": False,
+                "message": "The scanned coordinates are not within 5 meters of the check post."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         file_name = f"{check_post_id}_{check_post_officer_id}.jpg"
         file_path = os.path.join(settings.MEDIA_ROOT, file_name)
 
@@ -629,7 +664,6 @@ class woodlogs_count_check(APIView):
                 "message": f"Error saving image: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
         image_url = request.build_absolute_uri(settings.MEDIA_URL + file_name)
 
         try:

@@ -4,6 +4,7 @@ from config.config import auth_jwt_config
 import cv2 
 import numpy as np 
 import matplotlib.pyplot as plt 
+from math import radians, cos, sin, sqrt, atan2
 
 class JWTUtils:
     def __init__(self):
@@ -60,3 +61,16 @@ def count_logs(image_path):
     cv2.drawContours(rgb, cnt, -1, (0, 255, 0), 2)
     
     return len(cnt)
+
+def check_the_post_under_required_lat_long(lat1, lon1, lat2, lon2):
+    R = 6371000
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    distance = R * c
+    return distance < 5

@@ -68,6 +68,8 @@ class authentication_services(APIView):
             return self.user_profile(request)
         elif type =='get_check_post_officer_under_admin':
             return self.get_check_post_officer_under_admin(request)
+        elif type =='get_admins':
+            return self.get_admins(request)
         
         else:
             return self.handle_error(request)
@@ -405,6 +407,28 @@ class authentication_services(APIView):
             "success": True,
             "message": "Check post officers under admin retrieved successfully",
             "check_post_officers": check_post_officers
+        })
+    
+    def get_admins(self, request):
+        admins = []
+        admin_data = database.child("user").get().val()
+        if admin_data is None:
+            return Response({
+                "success": False,
+                "message": "No users found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        for username, user_data in admin_data.items():
+            if user_data['role'] == 'admin':
+                admins.append({
+                    "_id": user_data['_id'],
+                    "name": user_data['name']
+                })
+
+        return Response({
+            "success": True,
+            "message": "Admins retrieved successfully",
+            "response": admins
         })
 
     def handle_error(self, request): 

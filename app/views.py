@@ -302,7 +302,7 @@ class authentication_services(APIView):
 
     def get_access_token(self, request):
         refresh_token = request.COOKIES.get('refresh_token') or request.headers.get('Authorization', '').replace('Bearer ', '') or request.data.get('refresh_token')
-            
+
         if not refresh_token:
             return Response({
                 "success": False,
